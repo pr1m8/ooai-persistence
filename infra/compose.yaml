@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: ooai-persistence-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${OOAI_PERSISTENCE_INFRA__POSTGRES_DATABASE}
+      POSTGRES_USER: ${OOAI_PERSISTENCE_INFRA__POSTGRES_USER}
+      POSTGRES_PASSWORD: ${OOAI_PERSISTENCE_INFRA__POSTGRES_PASSWORD}
+    ports:
+      - "${OOAI_PERSISTENCE_INFRA__POSTGRES_PORT}:5432"
+    volumes:
+      - ooai_persistence_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OOAI_PERSISTENCE_INFRA__POSTGRES_USER} -d ${OOAI_PERSISTENCE_INFRA__POSTGRES_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7
+    container_name: ooai-persistence-redis
+    restart: unless-stopped
+    profiles: ["redis"]
+    ports:
+      - "${OOAI_PERSISTENCE_INFRA__REDIS_PORT}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ooai_persistence_redis_data:/data
+
+  mongodb:
+    image: mongo:7
+    container_name: ooai-persistence-mongodb
+    restart: unless-stopped
+    profiles: ["mongodb"]
+    ports:
+      - "${OOAI_PERSISTENCE_INFRA__MONGODB_PORT}:27017"
+    volumes:
+      - ooai_persistence_mongodb_data:/data/db
+
+volumes:
+  ooai_persistence_postgres_data:
+  ooai_persistence_redis_data:
+  ooai_persistence_mongodb_data:

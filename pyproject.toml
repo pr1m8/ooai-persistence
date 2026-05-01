@@ -1,0 +1,127 @@
+[project]
+name = "ooai-persistence"
+version = "0.2.0"
+description = "Typed persistence utilities for LangGraph-based OOAI applications."
+authors = [
+    { name = "William R. Astley" }
+]
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = { text = "MIT" }
+keywords = [
+    "ai",
+    "langchain",
+    "langgraph",
+    "langsmith",
+    "persistence",
+    "postgres",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pydantic",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "langgraph>=0.6.0",
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.8.0",
+    "typing-extensions>=4.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/pr1m8/ooai-persistence"
+Documentation = "https://ooai-persistence.readthedocs.io/"
+Repository = "https://github.com/pr1m8/ooai-persistence"
+Issues = "https://github.com/pr1m8/ooai-persistence/issues"
+Releases = "https://github.com/pr1m8/ooai-persistence/releases"
+"CI" = "https://github.com/pr1m8/ooai-persistence/actions/workflows/ci.yml"
+"Release Workflow" = "https://github.com/pr1m8/ooai-persistence/actions/workflows/release.yml"
+
+[project.scripts]
+ooai-persistence = "ooai_persistence.cli:main"
+
+[project.optional-dependencies]
+postgres = [
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "psycopg[binary,pool]>=3.2.0",
+]
+sqlite = [
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "aiosqlite>=0.20.0",
+]
+redis = [
+    "langgraph-checkpoint-redis>=0.0.8",
+    "redis>=5.0.0",
+]
+mongodb = [
+    "langgraph-checkpoint-mongodb>=0.1.0",
+    "pymongo>=4.10.0",
+]
+langsmith = [
+    "langsmith>=0.3.0",
+]
+docs = [
+    "furo>=2024.8.6",
+    "myst-parser>=4.0.0",
+    "sphinx>=8.0.0",
+    "sphinx-copybutton>=0.5.2",
+]
+all = [
+    "ooai-persistence[postgres,sqlite,redis,mongodb,langsmith,docs]",
+]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "pytest-sugar>=1.0.0",
+    "rich>=14.0.0",
+    "ruff>=0.12.0",
+    "pyright>=1.1.390",
+]
+
+[build-system]
+requires = ["pdm-backend>=2.4.0"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --cov=src/ooai_persistence --cov-report=term-missing --cov-report=xml"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: integration tests requiring optional infrastructure",
+    "e2e: end-to-end public API smoke tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/ooai_persistence"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 85
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests", "examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.pyright]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+include = ["src", "tests", "examples"]
+venvPath = "."
+venv = ".venv"
