@@ -1,6 +1,6 @@
 [project]
 name = "ooai-persistence"
-version = "0.2.1"
+version = "0.2.2"
 description = "Typed persistence utilities for LangGraph-based OOAI applications."
 authors = [
     { name = "William R. Astley" }
