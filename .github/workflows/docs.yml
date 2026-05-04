@@ -27,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: pdm-project/setup-pdm@v4
         with:
           python-version: "3.13"
