@@ -1,6 +1,6 @@
 [project]
 name = "ooai-persistence"
-version = "0.2.0"
+version = "0.2.1"
 description = "Typed persistence utilities for LangGraph-based OOAI applications."
 authors = [
     { name = "William R. Astley" }
@@ -37,7 +37,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/pr1m8/ooai-persistence"
-Documentation = "https://ooai-persistence.readthedocs.io/"
+Documentation = "https://pr1m8.github.io/ooai-persistence/"
 Repository = "https://github.com/pr1m8/ooai-persistence"
 Issues = "https://github.com/pr1m8/ooai-persistence/issues"
 Releases = "https://github.com/pr1m8/ooai-persistence/releases"

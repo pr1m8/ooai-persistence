@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/pr1m8/ooai-persistence/actions/workflows/ci.yml/badge.svg)](https://github.com/pr1m8/ooai-persistence/actions/workflows/ci.yml)
 [![Release](https://github.com/pr1m8/ooai-persistence/actions/workflows/release.yml/badge.svg)](https://github.com/pr1m8/ooai-persistence/actions/workflows/release.yml)
+[![Docs](https://img.shields.io/badge/docs-github%20pages-blue)](https://pr1m8.github.io/ooai-persistence/)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![PDM](https://img.shields.io/badge/package%20manager-pdm-blue)
 ![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)
@@ -127,6 +128,7 @@ pdm build
 ```
 
 CI runs formatting, linting, typing, tests with coverage, and the Sphinx build.
+Docs also publish from `main` to [GitHub Pages](https://pr1m8.github.io/ooai-persistence/).
 
 ## Releasing
 

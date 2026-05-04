@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 project = "ooai-persistence"
 author = "William R. Astley"
 copyright = "2026, William R. Astley"
@@ -18,6 +20,11 @@ extensions = [
 
 autodoc_typehints = "description"
 html_theme = "furo"
+html_title = "ooai-persistence"
+html_baseurl = os.getenv(
+    "READTHEDOCS_CANONICAL_URL",
+    "https://pr1m8.github.io/ooai-persistence/",
+)
 source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
