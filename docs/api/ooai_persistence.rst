@@ -13,6 +13,7 @@
    bootstrap
    cli
    context
+   graphs
    providers
    registry
    resources

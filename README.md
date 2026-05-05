@@ -27,6 +27,14 @@ pdm run pytest
 pdm run ooai-persistence smoke --backend memory
 ```
 
+## Pragmatic usage
+
+Most applications want one of these patterns:
+
+- open a managed persistence bundle and use the store directly
+- compile a `StateGraph` with managed persistence already attached
+- bind managed persistence onto a graph you already compiled elsewhere
+
 For a no-infrastructure memory bundle:
 
 ```python
@@ -39,16 +47,60 @@ with open_sync_persistence(settings) as persistence:
     profile = persistence.store.get(("users", "will"), "profile")
 ```
 
-For async usage:
+For a pragmatic LangGraph flow:
 
 ```python
-from ooai_persistence import AppSettings, open_persistence
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+from ooai_persistence import AppSettings, open_graph
+
+
+class State(TypedDict):
+    question: str
+    answer: str
+
+
+def respond(state: State) -> State:
+    return {"answer": f"Echo: {state['question']}"}
+
+
+graph = StateGraph(State)
+graph.add_node("respond", respond)
+graph.add_edge(START, "respond")
+graph.add_edge("respond", END)
 
 settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
 
-async with open_persistence(settings) as persistence:
-    ...
+async with open_graph(graph, settings) as runtime:
+    await runtime.persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
+    result = await runtime.graph.ainvoke({"question": "hello", "answer": ""})
 ```
+
+If you already have a compiled graph, bind persistence onto it:
+
+```python
+from ooai_persistence import AppSettings, bind_graph_with_persistence, open_sync_persistence
+
+compiled = graph.compile()
+
+with open_sync_persistence(AppSettings.memory()) as bundle:
+    persistent_graph = bind_graph_with_persistence(compiled, bundle)
+```
+
+## LangGraph wrappers
+
+The top-level graph helpers are:
+
+- `compile_graph_with_persistence(graph, bundle, **compile_kwargs)`
+- `bind_graph_with_persistence(compiled_graph, bundle)`
+- `open_sync_graph(graph_or_compiled_graph, settings, **compile_kwargs)`
+- `open_graph(graph_or_compiled_graph, settings, **compile_kwargs)`
+
+`open_sync_graph` and `open_graph` yield a `PersistentGraph` with:
+
+- `runtime.graph`: the compiled or rebound LangGraph
+- `runtime.persistence`: the managed `PersistenceBundle`
 
 ## CLI
 
@@ -120,6 +172,8 @@ async with open_persistence(settings, registry=registry) as bundle:
     ...
 ```
 
+The same registry also flows through `open_graph(...)` and `open_sync_graph(...)`.
+
 ## Documentation and release checks
 
 ```bash
@@ -137,8 +191,8 @@ Releases are tag-driven:
 ```bash
 pdm lock --check
 make check
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.2
+git push origin v0.2.2
 ```
 
 The release workflow verifies that the tag matches `pyproject.toml`, runs the

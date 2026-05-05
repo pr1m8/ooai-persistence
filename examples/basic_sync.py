@@ -1,18 +1,41 @@
-"""Basic sync example for ``ooai_persistence``."""
+"""Pragmatic sync LangGraph example for ``ooai_persistence``."""
 
 from __future__ import annotations
 
-from ooai_persistence.context import persistence_context
-from ooai_persistence.settings import AppSettings
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+
+from ooai_persistence import AppSettings, open_sync_graph
+
+
+class State(TypedDict):
+    question: str
+    answer: str
+
+
+def respond(state: State) -> State:
+    return {"question": state["question"], "answer": f"Echo: {state['question']}"}
+
+
+def build_graph() -> StateGraph[State, None, State, State]:
+    graph = StateGraph(State)
+    graph.add_node("respond", respond)
+    graph.add_edge(START, "respond")
+    graph.add_edge("respond", END)
+    return graph
 
 
 def main() -> None:
-    """Open the configured persistence bundle and print active resources."""
-    settings = AppSettings()
-    with persistence_context(settings) as bundle:
-        print(bundle.checkpointer)
-        print(bundle.store)
-        print(bundle.graph_cache)
+    """Compile a graph with managed persistence and use the store directly."""
+    settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
+    with open_sync_graph(build_graph(), settings) as runtime:
+        store = runtime.persistence.store
+        assert store is not None
+        store.put(("profiles", "demo"), "name", {"value": "Will"})
+        result = runtime.graph.invoke({"question": "hello", "answer": ""})
+        print(result)
+        print(store.get(("profiles", "demo"), "name"))
 
 
 if __name__ == "__main__":

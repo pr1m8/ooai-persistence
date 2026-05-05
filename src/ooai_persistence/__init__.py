@@ -12,14 +12,26 @@ from ooai_persistence.context import (
     open_sync_persistence,
     persistence_context,
 )
+from ooai_persistence.graphs import (
+    PersistentGraph,
+    bind_graph_with_persistence,
+    compile_graph_with_persistence,
+    open_graph,
+    open_sync_graph,
+)
 from ooai_persistence.settings import AppSettings
 from ooai_persistence.smoke import SmokeReport, run_async_smoke, run_sync_smoke
 
 __all__ = [
     "AppSettings",
+    "PersistentGraph",
     "SmokeReport",
     "async_persistence_context",
+    "bind_graph_with_persistence",
+    "compile_graph_with_persistence",
+    "open_graph",
     "open_persistence",
+    "open_sync_graph",
     "open_sync_persistence",
     "persistence_context",
     "run_async_smoke",
