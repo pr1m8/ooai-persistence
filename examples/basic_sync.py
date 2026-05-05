@@ -33,7 +33,10 @@ def main() -> None:
         store = runtime.persistence.store
         assert store is not None
         store.put(("profiles", "demo"), "name", {"value": "Will"})
-        result = runtime.graph.invoke({"question": "hello", "answer": ""})
+        result = runtime.graph.invoke(
+            {"question": "hello", "answer": ""},
+            config={"configurable": {"thread_id": "demo-thread"}},
+        )
         print(result)
         print(store.get(("profiles", "demo"), "name"))
 

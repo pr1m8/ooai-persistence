@@ -74,8 +74,14 @@ settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
 
 async with open_graph(graph, settings) as runtime:
     await runtime.persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
-    result = await runtime.graph.ainvoke({"question": "hello", "answer": ""})
+    result = await runtime.graph.ainvoke(
+        {"question": "hello", "answer": ""},
+        config={"configurable": {"thread_id": "demo-thread"}},
+    )
 ```
+
+When a graph uses a checkpointer, LangGraph expects a `configurable.thread_id`
+or another checkpoint key in the runnable config.
 
 If you already have a compiled graph, bind persistence onto it:
 
@@ -86,6 +92,10 @@ compiled = graph.compile()
 
 with open_sync_persistence(AppSettings.memory()) as bundle:
     persistent_graph = bind_graph_with_persistence(compiled, bundle)
+    result = persistent_graph.invoke(
+        {"question": "hello", "answer": ""},
+        config={"configurable": {"thread_id": "demo-thread"}},
+    )
 ```
 
 ## LangGraph wrappers

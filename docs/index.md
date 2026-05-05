@@ -65,8 +65,14 @@ settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
 
 async with open_graph(graph, settings) as runtime:
     await runtime.persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
-    result = await runtime.graph.ainvoke({"question": "hello", "answer": ""})
+    result = await runtime.graph.ainvoke(
+        {"question": "hello", "answer": ""},
+        config={"configurable": {"thread_id": "demo-thread"}},
+    )
 ```
+
+Checkpointed graph runs need a runnable config such as
+`{"configurable": {"thread_id": "demo-thread"}}`.
 
 LangSmith settings read standard `LANGSMITH_*` variables:
 
@@ -108,6 +114,10 @@ compiled = graph.compile()
 
 with open_sync_persistence(AppSettings.memory()) as bundle:
     persistent_graph = bind_graph_with_persistence(compiled, bundle)
+    result = persistent_graph.invoke(
+        {"question": "hello", "answer": ""},
+        config={"configurable": {"thread_id": "demo-thread"}},
+    )
 ```
 
 ## API Reference

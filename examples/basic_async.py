@@ -34,7 +34,10 @@ async def main() -> None:
         store = runtime.persistence.store
         assert store is not None
         await store.aput(("profiles", "demo"), "name", {"value": "Will"})
-        result = await runtime.graph.ainvoke({"question": "hello", "answer": ""})
+        result = await runtime.graph.ainvoke(
+            {"question": "hello", "answer": ""},
+            config={"configurable": {"thread_id": "demo-thread"}},
+        )
         print(result)
         print(await store.aget(("profiles", "demo"), "name"))
 
