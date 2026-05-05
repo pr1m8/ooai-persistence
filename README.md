@@ -180,6 +180,15 @@ Then bring Postgres up locally:
 
 ```bash
 make bootstrap
+make up
+make test-e2e-postgres
+make down
+```
+
+Or, with the explicit infra names:
+
+```bash
+make bootstrap
 make infra-up
 make infra-test-postgres
 ```
@@ -241,6 +250,15 @@ store through the public context API.
 
 ```bash
 make bootstrap
+make up
+make test-e2e-postgres
+make down
+```
+
+Or use the explicit infra variants:
+
+```bash
+make bootstrap
 make infra-up
 make infra-up-docker
 make infra-test-postgres
@@ -269,6 +287,8 @@ and then runs the async CLI smoke check.
 `make infra-up` is the ergonomic default: it uses the Postgres server from
 `.env`, ensures the configured database exists, and avoids depending on Docker
 just to run the async store and persistence tests locally.
+
+`make up` and `make down` are the short aliases for that workflow.
 
 If you want the Compose-backed service explicitly, use `make infra-up-docker`.
 

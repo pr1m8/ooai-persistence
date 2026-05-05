@@ -6,12 +6,16 @@ include .env
 export
 endif
 
-.PHONY: bootstrap install sync lock update format lint typecheck docs check test test-unit test-integration test-e2e test-e2e-local test-e2e-memory test-e2e-sqlite test-e2e-postgres test-cov smoke smoke-sqlite smoke-postgres-async clean env infra-up infra-up-docker infra-ensure-postgres infra-up-redis infra-up-mongodb infra-test-postgres infra-down infra-reset infra-logs infra-psql infra-redis infra-mongo example-sync example-async
+.PHONY: bootstrap install sync lock update format lint typecheck docs check test test-unit test-integration test-e2e test-e2e-local test-e2e-memory test-e2e-sqlite test-e2e-postgres test-cov smoke smoke-sqlite smoke-postgres-async clean env up down infra-up infra-up-docker infra-ensure-postgres infra-up-redis infra-up-mongodb infra-test-postgres infra-down infra-reset infra-logs infra-psql infra-redis infra-mongo example-sync example-async
 
 .env:
 	cp .env.example .env
 
 env: .env
+
+up: infra-up
+
+down: infra-down
 
 bootstrap: env
 	pdm install -G:all
@@ -100,10 +104,10 @@ infra-test-postgres: infra-up
 	$(MAKE) test-e2e-postgres
 
 infra-down: env
-	$(COMPOSE) down
+	@python scripts/docker_ready.py >/dev/null 2>&1 && $(COMPOSE) down || echo "docker unavailable; no compose-managed services to stop"
 
 infra-reset: env
-	$(COMPOSE) down -v --remove-orphans
+	@python scripts/docker_ready.py >/dev/null 2>&1 && $(COMPOSE) down -v --remove-orphans || echo "docker unavailable; no compose-managed services to reset"
 
 infra-logs: env
 	$(COMPOSE) logs -f
