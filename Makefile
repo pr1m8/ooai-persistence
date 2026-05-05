@@ -6,7 +6,7 @@ include .env
 export
 endif
 
-.PHONY: bootstrap install sync lock update format lint typecheck docs check test test-unit test-integration test-e2e test-cov smoke smoke-sqlite smoke-postgres-async clean env infra-up infra-ensure-postgres infra-up-redis infra-up-mongodb infra-test-postgres infra-down infra-reset infra-logs infra-psql infra-redis infra-mongo example-sync example-async
+.PHONY: bootstrap install sync lock update format lint typecheck docs check test test-unit test-integration test-e2e test-e2e-local test-e2e-memory test-e2e-sqlite test-e2e-postgres test-cov smoke smoke-sqlite smoke-postgres-async clean env infra-up infra-up-docker infra-ensure-postgres infra-up-redis infra-up-mongodb infra-test-postgres infra-down infra-reset infra-logs infra-psql infra-redis infra-mongo example-sync example-async
 
 .env:
 	cp .env.example .env
@@ -54,6 +54,20 @@ test-integration:
 test-e2e:
 	pdm run pytest -m e2e tests/e2e
 
+test-e2e-local:
+	pdm run pytest --no-cov tests/e2e/test_memory_bundle.py tests/e2e/test_sqlite_bundle.py
+
+test-e2e-memory:
+	pdm run pytest --no-cov tests/e2e/test_memory_bundle.py
+
+test-e2e-sqlite:
+	pdm run pytest --no-cov tests/e2e/test_sqlite_bundle.py
+
+test-e2e-postgres: infra-up
+	$(MAKE) infra-ensure-postgres
+	OOAI_PERSISTENCE_E2E_POSTGRES=1 pdm run pytest --no-cov tests/e2e/test_postgres_bundle.py
+	OOAI_PERSISTENCE_E2E_POSTGRES=1 pdm run ooai-persistence smoke --backend postgres --async
+
 test-cov:
 	pdm run pytest --cov=src/ooai_persistence --cov-report=term-missing --cov-report=xml --cov-report=html
 
@@ -67,12 +81,11 @@ smoke-postgres-async:
 	pdm run ooai-persistence smoke --backend postgres --async
 
 infra-up: env
-	@if command -v docker >/dev/null 2>&1; then \
-		$(COMPOSE) up -d postgres; \
-	else \
-		echo "docker not found; using configured Postgres at $${OOAI_PERSISTENCE_INFRA__POSTGRES_HOST}:$${OOAI_PERSISTENCE_INFRA__POSTGRES_PORT}"; \
-		$(MAKE) infra-ensure-postgres; \
-	fi
+	@echo "using configured Postgres at $${OOAI_PERSISTENCE_INFRA__POSTGRES_HOST}:$${OOAI_PERSISTENCE_INFRA__POSTGRES_PORT}"
+	@$(MAKE) infra-ensure-postgres
+
+infra-up-docker: env
+	$(COMPOSE) up -d postgres
 
 infra-ensure-postgres: env
 	pdm run ooai-persistence ensure-postgres
@@ -84,9 +97,7 @@ infra-up-mongodb: env
 	$(COMPOSE) --profile mongodb up -d postgres mongodb
 
 infra-test-postgres: infra-up
-	$(MAKE) infra-ensure-postgres
-	OOAI_PERSISTENCE_E2E_POSTGRES=1 pdm run pytest --no-cov tests/e2e/test_postgres_bundle.py
-	OOAI_PERSISTENCE_E2E_POSTGRES=1 pdm run ooai-persistence smoke --backend postgres --async
+	$(MAKE) test-e2e-postgres
 
 infra-down: env
 	$(COMPOSE) down

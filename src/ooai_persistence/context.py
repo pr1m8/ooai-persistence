@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
+from pathlib import Path
 from typing import Any
 
 from ooai_persistence.bootstrap import maybe_async_setup, maybe_setup, should_setup_for_resource
@@ -102,7 +103,7 @@ def open_sync_memory_persistence(
 
 @contextmanager
 def open_sync_sqlite_persistence(
-    path: str = ".ooai/persistence/persistence.sqlite3",
+    path: str | Path = ".ooai/persistence/persistence.sqlite3",
     *,
     registry: MsgpackAllowlistRegistry | None = None,
 ) -> Iterator[PersistenceBundle]:
@@ -155,7 +156,7 @@ async def open_memory_persistence(
 
 @asynccontextmanager
 async def open_sqlite_persistence(
-    path: str = ".ooai/persistence/persistence.sqlite3",
+    path: str | Path = ".ooai/persistence/persistence.sqlite3",
     *,
     registry: MsgpackAllowlistRegistry | None = None,
 ) -> AsyncIterator[PersistenceBundle]:
@@ -230,7 +231,7 @@ def open_sync_memory_store() -> Iterator[Any]:
 
 @contextmanager
 def open_sync_sqlite_store(
-    path: str = ".ooai/persistence/persistence.sqlite3",
+    path: str | Path = ".ooai/persistence/persistence.sqlite3",
 ) -> Iterator[Any]:
     """Open a synchronous SQLite-backed store."""
     with store_context(sqlite_settings(path)) as store:
@@ -272,7 +273,7 @@ async def open_memory_store() -> AsyncIterator[Any]:
 
 @asynccontextmanager
 async def open_sqlite_store(
-    path: str = ".ooai/persistence/persistence.sqlite3",
+    path: str | Path = ".ooai/persistence/persistence.sqlite3",
 ) -> AsyncIterator[Any]:
     """Open an asynchronous SQLite-backed store."""
     async with async_store_context(sqlite_settings(path)) as store:

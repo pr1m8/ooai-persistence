@@ -239,6 +239,7 @@ store through the public context API.
 ```bash
 make bootstrap
 make infra-up
+make infra-up-docker
 make infra-test-postgres
 make infra-down
 ```
@@ -246,12 +247,27 @@ make infra-down
 `make bootstrap` creates `.env` from `.env.example` when needed and installs all
 PDM extras. See `infra/README.md` for Compose details.
 
-`make infra-test-postgres` runs the real async Postgres E2E path and the CLI
-smoke path against Docker Compose Postgres.
+`make infra-test-postgres` remains as a compatibility alias for the same
+Postgres E2E and CLI smoke flow.
 
-If Docker is not installed but `.env` points at a reachable Postgres server,
-`make infra-up` falls back to `ooai-persistence ensure-postgres` and creates the
-configured database if needed.
+If you want the shortest test commands, use:
+
+```bash
+make test-e2e-memory
+make test-e2e-sqlite
+make test-e2e-local
+make test-e2e-postgres
+```
+
+The Postgres target brings up the configured database, runs the public wrapper
+E2E suite for `open_postgres_persistence(...)` and `open_postgres_store(...)`,
+and then runs the async CLI smoke check.
+
+`make infra-up` is the ergonomic default: it uses the Postgres server from
+`.env`, ensures the configured database exists, and avoids depending on Docker
+just to run the async store and persistence tests locally.
+
+If you want the Compose-backed service explicitly, use `make infra-up-docker`.
 
 The matching `.env` path is already laid out in [.env.example](/Users/will/Projects/ooai-persistence/.env.example).
 
