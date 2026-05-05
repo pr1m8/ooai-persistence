@@ -8,8 +8,14 @@ Purpose:
 
 from ooai_persistence.context import (
     async_persistence_context,
+    open_memory_persistence,
     open_persistence,
+    open_postgres_persistence,
+    open_sqlite_persistence,
+    open_sync_memory_persistence,
     open_sync_persistence,
+    open_sync_postgres_persistence,
+    open_sync_sqlite_persistence,
     persistence_context,
 )
 from ooai_persistence.graphs import (
@@ -36,9 +42,15 @@ __all__ = [
     "compile_graph_with_persistence",
     "memory_settings",
     "open_graph",
+    "open_memory_persistence",
     "open_persistence",
+    "open_postgres_persistence",
+    "open_sqlite_persistence",
     "open_sync_graph",
+    "open_sync_memory_persistence",
     "open_sync_persistence",
+    "open_sync_postgres_persistence",
+    "open_sync_sqlite_persistence",
     "persistence_context",
     "postgres_settings",
     "run_async_smoke",

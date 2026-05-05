@@ -18,6 +18,15 @@ sqlite = sqlite_settings(".ooai/persistence/dev.sqlite3")
 postgres = postgres_settings(database="ooai_persistence")
 ```
 
+If you do not want to touch settings at all, open the bundle directly:
+
+```python
+from ooai_persistence import open_postgres_persistence
+
+async with open_postgres_persistence(database="ooai_persistence") as persistence:
+    await persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
+```
+
 ```python
 from ooai_persistence import open_sync_persistence, sqlite_settings
 
@@ -34,6 +43,7 @@ with open_sync_persistence(settings) as persistence:
 The most useful entrypoints are:
 
 - `open_sync_persistence(...)` and `open_persistence(...)` when you want raw store/checkpointer access
+- `open_sync_memory_persistence(...)`, `open_sqlite_persistence(...)`, and `open_postgres_persistence(...)` when you want that access without building settings first
 - `open_sync_graph(...)` and `open_graph(...)` when you want a compiled LangGraph plus managed persistence
 - `bind_graph_with_persistence(...)` when the graph is already compiled somewhere else
 

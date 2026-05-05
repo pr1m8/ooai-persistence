@@ -48,16 +48,30 @@ postgres_via_uri = postgres_settings("postgresql://postgres:postgres@localhost:5
 If those cover your case, you do not need to construct `AppSettings(...)`
 directly.
 
+If you want the shortest possible path, skip settings entirely and open the
+bundle directly:
+
+```python
+from ooai_persistence import (
+    open_memory_persistence,
+    open_postgres_persistence,
+    open_sqlite_persistence,
+)
+
+async with open_postgres_persistence(database="ooai_persistence") as persistence:
+    await persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
+```
+
+That is the easiest async entrypoint in the package right now.
+
 ## Common patterns
 
 ### 1. Use the store directly
 
 ```python
-from ooai_persistence import memory_settings, open_sync_persistence
+from ooai_persistence import open_sync_memory_persistence
 
-settings = memory_settings()
-
-with open_sync_persistence(settings) as persistence:
+with open_sync_memory_persistence() as persistence:
     persistence.store.put(("users", "will"), "profile", {"name": "Will"})
     profile = persistence.store.get(("users", "will"), "profile")
 ```
@@ -124,6 +138,15 @@ with open_sync_persistence(memory_settings()) as bundle:
 If your real target is async Postgres, the shortest path is:
 
 ```python
+from ooai_persistence import open_postgres_persistence
+
+async with open_postgres_persistence(database="ooai_persistence") as persistence:
+    await persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
+```
+
+If you are compiling a LangGraph too:
+
+```python
 from ooai_persistence import open_graph, postgres_settings
 
 settings = postgres_settings(database="ooai_persistence")
@@ -132,11 +155,12 @@ settings = postgres_settings(database="ooai_persistence")
 Or use a URI:
 
 ```python
-from ooai_persistence import open_persistence, postgres_settings
+from ooai_persistence import open_postgres_persistence
 
-settings = postgres_settings(
+async with open_postgres_persistence(
     "postgresql://postgres:postgres@localhost:5442/ooai_persistence?sslmode=disable"
-)
+) as persistence:
+    ...
 ```
 
 Then bring Postgres up locally:
@@ -158,6 +182,15 @@ The top-level graph helpers are:
 - `bind_graph_with_persistence(compiled_graph, bundle)`
 - `open_sync_graph(graph_or_compiled_graph, settings, **compile_kwargs)`
 - `open_graph(graph_or_compiled_graph, settings, **compile_kwargs)`
+
+The top-level persistence helpers are:
+
+- `open_sync_memory_persistence()`
+- `open_sync_sqlite_persistence(path)`
+- `open_sync_postgres_persistence(...)`
+- `open_memory_persistence()`
+- `open_sqlite_persistence(path)`
+- `open_postgres_persistence(...)`
 
 `open_sync_graph` and `open_graph` yield a `PersistentGraph` with:
 
@@ -237,6 +270,7 @@ async with open_persistence(settings, registry=registry) as bundle:
 ```
 
 The same registry also flows through `open_graph(...)` and `open_sync_graph(...)`.
+It also flows through the direct-open helpers like `open_postgres_persistence(...)`.
 
 ## When to use AppSettings directly
 
