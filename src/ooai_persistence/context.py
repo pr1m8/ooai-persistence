@@ -34,6 +34,35 @@ def _store_only_settings(settings: AppSettings) -> AppSettings:
     )
 
 
+def _postgres_open_settings(
+    uri: str | None,
+    *,
+    host: str | None,
+    port: int | None,
+    database: str | None,
+    user: str | None,
+    password: str | None,
+    sslmode: str | None,
+    graph_cache: bool,
+) -> AppSettings:
+    """Resolve Postgres helper defaults from environment-backed app settings."""
+    if uri is not None:
+        return postgres_settings(uri, graph_cache=graph_cache)
+
+    defaults = AppSettings().infra
+    return postgres_settings(
+        host=host if host is not None else defaults.postgres_host,
+        port=port if port is not None else defaults.postgres_port,
+        database=database if database is not None else defaults.postgres_database,
+        user=user if user is not None else defaults.postgres_user,
+        password=(
+            password if password is not None else defaults.postgres_password.get_secret_value()
+        ),
+        sslmode=sslmode if sslmode is not None else defaults.postgres_sslmode,
+        graph_cache=graph_cache,
+    )
+
+
 @contextmanager
 def persistence_context(
     settings: AppSettings,
@@ -116,17 +145,17 @@ def open_sync_sqlite_persistence(
 def open_sync_postgres_persistence(
     uri: str | None = None,
     *,
-    host: str = "localhost",
-    port: int = 5442,
-    database: str = "ooai_persistence",
-    user: str = "postgres",
-    password: str = "postgres",
-    sslmode: str = "disable",
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    sslmode: str | None = None,
     graph_cache: bool = True,
     registry: MsgpackAllowlistRegistry | None = None,
 ) -> Iterator[PersistenceBundle]:
     """Open a synchronous Postgres-backed persistence bundle."""
-    settings = postgres_settings(
+    settings = _postgres_open_settings(
         uri,
         host=host,
         port=port,
@@ -169,17 +198,17 @@ async def open_sqlite_persistence(
 async def open_postgres_persistence(
     uri: str | None = None,
     *,
-    host: str = "localhost",
-    port: int = 5442,
-    database: str = "ooai_persistence",
-    user: str = "postgres",
-    password: str = "postgres",
-    sslmode: str = "disable",
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    sslmode: str | None = None,
     graph_cache: bool = True,
     registry: MsgpackAllowlistRegistry | None = None,
 ) -> AsyncIterator[PersistenceBundle]:
     """Open an asynchronous Postgres-backed persistence bundle."""
-    settings = postgres_settings(
+    settings = _postgres_open_settings(
         uri,
         host=host,
         port=port,
@@ -242,16 +271,16 @@ def open_sync_sqlite_store(
 def open_sync_postgres_store(
     uri: str | None = None,
     *,
-    host: str = "localhost",
-    port: int = 5442,
-    database: str = "ooai_persistence",
-    user: str = "postgres",
-    password: str = "postgres",
-    sslmode: str = "disable",
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    sslmode: str | None = None,
 ) -> Iterator[Any]:
     """Open a synchronous Postgres-backed store."""
     with store_context(
-        postgres_settings(
+        _postgres_open_settings(
             uri,
             host=host,
             port=port,
@@ -259,6 +288,7 @@ def open_sync_postgres_store(
             user=user,
             password=password,
             sslmode=sslmode,
+            graph_cache=True,
         )
     ) as store:
         yield store
@@ -284,16 +314,16 @@ async def open_sqlite_store(
 async def open_postgres_store(
     uri: str | None = None,
     *,
-    host: str = "localhost",
-    port: int = 5442,
-    database: str = "ooai_persistence",
-    user: str = "postgres",
-    password: str = "postgres",
-    sslmode: str = "disable",
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    sslmode: str | None = None,
 ) -> AsyncIterator[Any]:
     """Open an asynchronous Postgres-backed store."""
     async with async_store_context(
-        postgres_settings(
+        _postgres_open_settings(
             uri,
             host=host,
             port=port,
@@ -301,6 +331,7 @@ async def open_postgres_store(
             user=user,
             password=password,
             sslmode=sslmode,
+            graph_cache=True,
         )
     ) as store:
         yield store

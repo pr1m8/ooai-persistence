@@ -173,6 +173,9 @@ async with open_postgres_persistence(
     ...
 ```
 
+If you call the Postgres helpers without connection arguments, they read the
+same `OOAI_PERSISTENCE_INFRA__POSTGRES_*` settings that `AppSettings()` uses.
+
 Then bring Postgres up locally:
 
 ```bash
