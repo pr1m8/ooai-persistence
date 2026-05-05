@@ -224,3 +224,88 @@ class AppSettings(BaseSettings):
                 "store": {"backend": "sqlite", "sqlite_path": sqlite_path},
             }
         )
+
+    @classmethod
+    def postgres(
+        cls,
+        uri: str | None = None,
+        *,
+        host: str = "localhost",
+        port: int = 5442,
+        database: str = "ooai_persistence",
+        user: str = "postgres",
+        password: str = "postgres",
+        sslmode: str = "disable",
+        graph_cache: bool = True,
+    ) -> AppSettings:
+        """Return settings for async Postgres-backed persistence.
+
+        Pass either a full ``uri`` or individual connection parts.
+        """
+        if uri is not None:
+            payload = {
+                "checkpointer": {"backend": "postgres_async", "postgres_uri": uri},
+                "store": {"backend": "postgres_async", "postgres_uri": uri},
+                "graph_cache": {
+                    "enabled": graph_cache,
+                    "backend": "memory" if graph_cache else "none",
+                },
+            }
+            return cls.model_validate(payload)
+
+        payload = {
+            "infra": {
+                "postgres_enabled": True,
+                "postgres_host": host,
+                "postgres_port": port,
+                "postgres_database": database,
+                "postgres_user": user,
+                "postgres_password": password,
+                "postgres_sslmode": sslmode,
+                "redis_enabled": False,
+                "mongodb_enabled": False,
+            },
+            "checkpointer": {"backend": "postgres_async"},
+            "store": {"backend": "postgres_async"},
+            "graph_cache": {
+                "enabled": graph_cache,
+                "backend": "memory" if graph_cache else "none",
+            },
+        }
+        return cls.model_validate(payload)
+
+
+def memory_settings(*, graph_cache: bool = True) -> AppSettings:
+    """Return a zero-infrastructure in-memory settings preset."""
+    return AppSettings.memory(graph_cache=graph_cache)
+
+
+def sqlite_settings(
+    path: str | Path = ".ooai/persistence/persistence.sqlite3",
+) -> AppSettings:
+    """Return a local SQLite settings preset."""
+    return AppSettings.local_sqlite(path)
+
+
+def postgres_settings(
+    uri: str | None = None,
+    *,
+    host: str = "localhost",
+    port: int = 5442,
+    database: str = "ooai_persistence",
+    user: str = "postgres",
+    password: str = "postgres",
+    sslmode: str = "disable",
+    graph_cache: bool = True,
+) -> AppSettings:
+    """Return an async Postgres settings preset."""
+    return AppSettings.postgres(
+        uri,
+        host=host,
+        port=port,
+        database=database,
+        user=user,
+        password=password,
+        sslmode=sslmode,
+        graph_cache=graph_cache,
+    )

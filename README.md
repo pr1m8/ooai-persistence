@@ -8,7 +8,8 @@
 ![Coverage](https://img.shields.io/badge/coverage-89%25-brightgreen)
 ![Async Postgres](https://img.shields.io/badge/e2e-async%20postgres%20store%20%2B%20checkpointer-brightgreen)
 
-`ooai-persistence` provides typed persistence helpers for LangGraph-based OOAI applications.
+`ooai-persistence` gives LangGraph apps a usable persistence layer without
+making you hand-build a big settings tree first.
 
 ## Responsibilities
 
@@ -27,33 +28,47 @@ pdm run pytest
 pdm run ooai-persistence smoke --backend memory
 ```
 
-## Pragmatic usage
+## Start here
 
-Most applications want one of these patterns:
+Most applications should start with one of these helpers:
 
-- open a managed persistence bundle and use the store directly
-- compile a `StateGraph` with managed persistence already attached
-- bind managed persistence onto a graph you already compiled elsewhere
-
-For a no-infrastructure memory bundle:
+- `memory_settings()` for tests and local no-infra runs
+- `sqlite_settings(path)` for one-file local persistence
+- `postgres_settings(...)` for the real async Postgres path
 
 ```python
-from ooai_persistence import AppSettings, open_sync_persistence
+from ooai_persistence import memory_settings, postgres_settings, sqlite_settings
 
-settings = AppSettings.memory()
+memory = memory_settings()
+sqlite = sqlite_settings(".ooai/persistence/dev.sqlite3")
+postgres = postgres_settings(database="ooai_persistence")
+postgres_via_uri = postgres_settings("postgresql://postgres:postgres@localhost:5442/ooai_persistence?sslmode=disable")
+```
+
+If those cover your case, you do not need to construct `AppSettings(...)`
+directly.
+
+## Common patterns
+
+### 1. Use the store directly
+
+```python
+from ooai_persistence import memory_settings, open_sync_persistence
+
+settings = memory_settings()
 
 with open_sync_persistence(settings) as persistence:
     persistence.store.put(("users", "will"), "profile", {"name": "Will"})
     profile = persistence.store.get(("users", "will"), "profile")
 ```
 
-For a pragmatic LangGraph flow:
+### 2. Compile a graph with async persistence attached
 
 ```python
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
-from ooai_persistence import AppSettings, open_graph
+from ooai_persistence import open_graph, postgres_settings
 
 
 class State(TypedDict):
@@ -70,7 +85,13 @@ graph.add_node("respond", respond)
 graph.add_edge(START, "respond")
 graph.add_edge("respond", END)
 
-settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
+settings = postgres_settings(
+    host="localhost",
+    port=5442,
+    database="ooai_persistence",
+    user="postgres",
+    password="postgres",
+)
 
 async with open_graph(graph, settings) as runtime:
     await runtime.persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
@@ -83,20 +104,51 @@ async with open_graph(graph, settings) as runtime:
 When a graph uses a checkpointer, LangGraph expects a `configurable.thread_id`
 or another checkpoint key in the runnable config.
 
-If you already have a compiled graph, bind persistence onto it:
+### 3. Bind persistence onto a compiled graph
 
 ```python
-from ooai_persistence import AppSettings, bind_graph_with_persistence, open_sync_persistence
+from ooai_persistence import bind_graph_with_persistence, memory_settings, open_sync_persistence
 
 compiled = graph.compile()
 
-with open_sync_persistence(AppSettings.memory()) as bundle:
+with open_sync_persistence(memory_settings()) as bundle:
     persistent_graph = bind_graph_with_persistence(compiled, bundle)
     result = persistent_graph.invoke(
         {"question": "hello", "answer": ""},
         config={"configurable": {"thread_id": "demo-thread"}},
     )
 ```
+
+## Async Postgres, the easy way
+
+If your real target is async Postgres, the shortest path is:
+
+```python
+from ooai_persistence import open_graph, postgres_settings
+
+settings = postgres_settings(database="ooai_persistence")
+```
+
+Or use a URI:
+
+```python
+from ooai_persistence import open_persistence, postgres_settings
+
+settings = postgres_settings(
+    "postgresql://postgres:postgres@localhost:5442/ooai_persistence?sslmode=disable"
+)
+```
+
+Then bring Postgres up locally:
+
+```bash
+make bootstrap
+make infra-up
+make infra-test-postgres
+```
+
+That path exercises the real async LangGraph checkpointer and store, not a fake
+shim around them.
 
 ## LangGraph wrappers
 
@@ -147,6 +199,8 @@ If Docker is not installed but `.env` points at a reachable Postgres server,
 `make infra-up` falls back to `ooai-persistence ensure-postgres` and creates the
 configured database if needed.
 
+The matching `.env` path is already laid out in [.env.example](/Users/will/Projects/ooai-persistence/.env.example).
+
 ## Default backend behavior
 
 By default, checkpointer and store use `backend="auto"`.
@@ -184,6 +238,15 @@ async with open_persistence(settings, registry=registry) as bundle:
 
 The same registry also flows through `open_graph(...)` and `open_sync_graph(...)`.
 
+## When to use AppSettings directly
+
+Reach for `AppSettings(...)` only when you want to:
+
+- override checkpointer and store backends separately
+- drive config from `.env`
+- customize serializer allowlists, cache settings, or infra defaults
+- compose persistence settings into a larger application settings object
+
 ## Documentation and release checks
 
 ```bash
@@ -201,8 +264,8 @@ Releases are tag-driven:
 ```bash
 pdm lock --check
 make check
-git tag v0.2.2
-git push origin v0.2.2
+git tag v0.2.3
+git push origin v0.2.3
 ```
 
 The release workflow verifies that the tag matches `pyproject.toml`, runs the

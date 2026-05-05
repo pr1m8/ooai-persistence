@@ -7,7 +7,7 @@ from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from ooai_persistence import AppSettings, open_graph
+from ooai_persistence import open_graph, sqlite_settings
 
 
 class State(TypedDict):
@@ -29,7 +29,7 @@ def build_graph() -> StateGraph[State, None, State, State]:
 
 async def main() -> None:
     """Compile a graph with managed async persistence and use the async store."""
-    settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
+    settings = sqlite_settings(".ooai/persistence/dev.sqlite3")
     async with open_graph(build_graph(), settings) as runtime:
         store = runtime.persistence.store
         assert store is not None

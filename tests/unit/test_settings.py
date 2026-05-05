@@ -2,7 +2,13 @@
 
 from pathlib import Path
 
-from ooai_persistence.settings import AppSettings, CheckpointerSettings
+from ooai_persistence.settings import (
+    AppSettings,
+    CheckpointerSettings,
+    memory_settings,
+    postgres_settings,
+    sqlite_settings,
+)
 
 
 def test_default_infra_uris() -> None:
@@ -36,6 +42,27 @@ def test_local_sqlite_settings_pin_paths() -> None:
     assert settings.checkpointer.backend == "sqlite"
     assert settings.checkpointer.sqlite_path == Path("state.sqlite3")
     assert settings.store.sqlite_path == Path("state.sqlite3")
+
+
+def test_postgres_settings_use_async_postgres_backend() -> None:
+    settings = AppSettings.postgres(database="demo")
+    assert settings.checkpointer.backend == "postgres_async"
+    assert settings.store.backend == "postgres_async"
+    assert settings.infra.postgres_database == "demo"
+    assert settings.graph_cache.backend == "memory"
+
+
+def test_postgres_settings_accept_explicit_uri() -> None:
+    settings = AppSettings.postgres("postgresql://user:pass@host:5432/app?sslmode=disable")
+    assert settings.checkpointer.postgres_uri is not None
+    assert settings.checkpointer.postgres_uri.startswith("postgresql://user:pass@host")
+    assert settings.store.postgres_uri == settings.checkpointer.postgres_uri
+
+
+def test_top_level_settings_helpers_delegate_to_appsettings() -> None:
+    assert memory_settings().checkpointer.backend == "memory"
+    assert sqlite_settings("demo.sqlite3").store.sqlite_path == Path("demo.sqlite3")
+    assert postgres_settings(database="demo").store.backend == "postgres_async"
 
 
 def test_langsmith_settings_read_standard_env(monkeypatch) -> None:

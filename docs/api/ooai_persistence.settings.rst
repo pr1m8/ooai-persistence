@@ -1,8 +1,16 @@
-ooai\_persistence.settings
+﻿ooai\_persistence.settings
 ==========================
 
 .. automodule:: ooai_persistence.settings
 
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      memory_settings
+      postgres_settings
+      sqlite_settings
    
    .. rubric:: Classes
 

@@ -2,10 +2,26 @@
 
 Typed persistence helpers for LangGraph-based OOAI applications.
 
-```python
-from ooai_persistence import AppSettings, open_sync_persistence
+## Start here
 
-settings = AppSettings.memory()
+The usual entrypoints are:
+
+- `memory_settings()` for tests and no-infra runs
+- `sqlite_settings(path)` for one-file local persistence
+- `postgres_settings(...)` for the real async Postgres path
+
+```python
+from ooai_persistence import memory_settings, postgres_settings, sqlite_settings
+
+memory = memory_settings()
+sqlite = sqlite_settings(".ooai/persistence/dev.sqlite3")
+postgres = postgres_settings(database="ooai_persistence")
+```
+
+```python
+from ooai_persistence import open_sync_persistence, sqlite_settings
+
+settings = sqlite_settings(".ooai/persistence/dev.sqlite3")
 
 with open_sync_persistence(settings) as persistence:
     checkpointer = persistence.checkpointer
@@ -44,7 +60,7 @@ Use `AppSettings` directly, or load settings from `.env` with the
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
-from ooai_persistence import AppSettings, open_graph
+from ooai_persistence import open_graph, postgres_settings
 
 
 class State(TypedDict):
@@ -61,7 +77,7 @@ graph.add_node("respond", respond)
 graph.add_edge(START, "respond")
 graph.add_edge("respond", END)
 
-settings = AppSettings.local_sqlite(".ooai/persistence/dev.sqlite3")
+settings = postgres_settings(database="ooai_persistence")
 
 async with open_graph(graph, settings) as runtime:
     await runtime.persistence.store.aput(("profiles", "demo"), "name", {"value": "Will"})
@@ -108,11 +124,11 @@ runs setup, and verifies real round trips.
 ## Existing compiled graphs
 
 ```python
-from ooai_persistence import AppSettings, bind_graph_with_persistence, open_sync_persistence
+from ooai_persistence import bind_graph_with_persistence, memory_settings, open_sync_persistence
 
 compiled = graph.compile()
 
-with open_sync_persistence(AppSettings.memory()) as bundle:
+with open_sync_persistence(memory_settings()) as bundle:
     persistent_graph = bind_graph_with_persistence(compiled, bundle)
     result = persistent_graph.invoke(
         {"question": "hello", "answer": ""},
