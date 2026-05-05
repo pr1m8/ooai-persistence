@@ -272,6 +272,25 @@ just to run the async store and persistence tests locally.
 
 If you want the Compose-backed service explicitly, use `make infra-up-docker`.
 
+The package also accepts standard Postgres env names when you do not want the
+full nested prefix, including:
+
+- `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB` / `POSTGRES_DATABASE`
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_SSLMODE`
+- `POSTGRES_POOL_MIN_SIZE`, `POSTGRES_POOL_MAX_SIZE`
+- `DATABASE_URL`, `POSTGRES_URL`, `POSTGRES_URI`
+- `SUPABASE_DB_URL`, `SUPABASE_DATABASE_URL`
+
+That means the zero-argument Postgres helpers can work cleanly in plain
+Postgres or Supabase-style environments:
+
+```python
+from ooai_persistence import open_postgres_store
+
+async with open_postgres_store() as store:
+    ...
+```
+
 The matching `.env` path is already laid out in [.env.example](/Users/will/Projects/ooai-persistence/.env.example).
 
 ## Default backend behavior

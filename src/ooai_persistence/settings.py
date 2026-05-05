@@ -12,9 +12,10 @@ Design:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from pydantic import AliasChoices, BaseModel, Field, SecretStr, computed_field
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from ooai_persistence.types import GraphCacheBackend, PersistenceBackend
@@ -91,6 +92,8 @@ class InfraSettings(BaseModel):
     postgres_user: str = "postgres"
     postgres_password: SecretStr = SecretStr("postgres")
     postgres_sslmode: str = "disable"
+    postgres_pool_min_size: int | None = None
+    postgres_pool_max_size: int | None = None
 
     redis_enabled: bool = False
     redis_host: str = "localhost"
@@ -187,6 +190,59 @@ class AppSettings(BaseSettings):
     serializer: SerializerSettings = Field(default_factory=SerializerSettings)
     infra: InfraSettings = Field(default_factory=InfraSettings)
     langsmith: LangSmithSettings = Field(default_factory=LangSmithSettings)
+
+    @model_validator(mode="after")
+    def _apply_standard_env_aliases(self) -> AppSettings:
+        """Map common flat Postgres env vars into nested persistence settings."""
+        env = os.environ
+        defaults = InfraSettings()
+
+        def first_env(*names: str) -> str | None:
+            for name in names:
+                value = env.get(name)
+                if value:
+                    return value
+            return None
+
+        database_url = first_env(
+            "DATABASE_URL",
+            "POSTGRES_URL",
+            "POSTGRES_URI",
+            "SUPABASE_DB_URL",
+            "SUPABASE_DATABASE_URL",
+        )
+        if database_url:
+            if self.checkpointer.postgres_uri is None:
+                self.checkpointer.postgres_uri = database_url
+            if self.store.postgres_uri is None:
+                self.store.postgres_uri = database_url
+
+        alias_map = (
+            ("postgres_host", ("POSTGRES_HOST", "PGHOST")),
+            ("postgres_port", ("POSTGRES_PORT", "PGPORT")),
+            ("postgres_database", ("POSTGRES_DB", "POSTGRES_DATABASE", "PGDATABASE")),
+            ("postgres_user", ("POSTGRES_USER", "PGUSER")),
+            ("postgres_password", ("POSTGRES_PASSWORD", "PGPASSWORD")),
+            ("postgres_sslmode", ("POSTGRES_SSLMODE", "PGSSLMODE")),
+            ("postgres_pool_min_size", ("POSTGRES_POOL_MIN_SIZE",)),
+            ("postgres_pool_max_size", ("POSTGRES_POOL_MAX_SIZE",)),
+        )
+        for field_name, env_names in alias_map:
+            current = getattr(self.infra, field_name)
+            default = getattr(defaults, field_name)
+            if current != default:
+                continue
+            value = first_env(*env_names)
+            if value is None:
+                continue
+            if isinstance(default, SecretStr):
+                setattr(self.infra, field_name, SecretStr(value))
+            elif field_name in {"postgres_port", "postgres_pool_min_size", "postgres_pool_max_size"}:
+                setattr(self.infra, field_name, int(value))
+            else:
+                setattr(self.infra, field_name, value)
+
+        return self
 
     @classmethod
     def memory(cls, *, graph_cache: bool = True) -> AppSettings:

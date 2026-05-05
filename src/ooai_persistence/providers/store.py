@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from ooai_persistence.registry import resolve_backend
 from ooai_persistence.settings import AppSettings
@@ -20,6 +20,20 @@ def _sqlite_path(path: Path | None) -> Path:
     if path is None:
         raise ValueError("SQLite store backend requires store.sqlite_path.")
     return _ensure_parent(path)
+
+
+def _postgres_pool_config(settings: AppSettings) -> Any | None:
+    infra = settings.infra
+    if infra.postgres_pool_min_size is None and infra.postgres_pool_max_size is None:
+        return None
+    return cast(
+        Any,
+        {
+        "min_size": infra.postgres_pool_min_size,
+        "max_size": infra.postgres_pool_max_size,
+        "kwargs": {},
+        },
+    )
 
 
 def build_store(settings: AppSettings) -> Any:
@@ -40,7 +54,7 @@ def build_store(settings: AppSettings) -> Any:
         from langgraph.store.postgres import PostgresStore
 
         uri = settings.store.postgres_uri or settings.infra.postgres_uri
-        return PostgresStore.from_conn_string(uri)
+        return PostgresStore.from_conn_string(uri, pool_config=_postgres_pool_config(settings))
     if backend == "redis":
         from langgraph.store.redis import RedisStore
 
@@ -72,7 +86,10 @@ async def build_async_store(settings: AppSettings) -> Any:
         from langgraph.store.postgres.aio import AsyncPostgresStore
 
         uri = settings.store.postgres_uri or settings.infra.postgres_uri
-        return AsyncPostgresStore.from_conn_string(uri)
+        return AsyncPostgresStore.from_conn_string(
+            uri,
+            pool_config=_postgres_pool_config(settings),
+        )
     if backend == "redis_async":
         from langgraph.store.redis.aio import AsyncRedisStore
 

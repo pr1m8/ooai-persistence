@@ -73,3 +73,47 @@ def test_langsmith_settings_read_standard_env(monkeypatch) -> None:
 
     assert settings.langsmith.tracing is True
     assert settings.langsmith.project == "persistence-tests"
+
+
+def test_standard_postgres_env_aliases_are_supported(monkeypatch) -> None:
+    monkeypatch.setenv("POSTGRES_HOST", "db.example")
+    monkeypatch.setenv("POSTGRES_PORT", "5432")
+    monkeypatch.setenv("POSTGRES_DB", "appdb")
+    monkeypatch.setenv("POSTGRES_USER", "app")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "secret")
+    monkeypatch.setenv("POSTGRES_SSLMODE", "require")
+    monkeypatch.setenv("POSTGRES_POOL_MIN_SIZE", "3")
+    monkeypatch.setenv("POSTGRES_POOL_MAX_SIZE", "12")
+
+    settings = AppSettings()
+
+    assert settings.infra.postgres_host == "db.example"
+    assert settings.infra.postgres_port == 5432
+    assert settings.infra.postgres_database == "appdb"
+    assert settings.infra.postgres_user == "app"
+    assert settings.infra.postgres_password.get_secret_value() == "secret"
+    assert settings.infra.postgres_sslmode == "require"
+    assert settings.infra.postgres_pool_min_size == 3
+    assert settings.infra.postgres_pool_max_size == 12
+
+
+def test_database_url_and_supabase_db_url_map_to_postgres_uri(monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@db.example:5432/appdb?sslmode=require")
+
+    settings = AppSettings()
+
+    assert settings.checkpointer.postgres_uri == settings.store.postgres_uri
+    assert settings.checkpointer.postgres_uri is not None
+    assert "db.example:5432/appdb" in settings.checkpointer.postgres_uri
+
+    monkeypatch.delenv("DATABASE_URL")
+    monkeypatch.setenv(
+        "SUPABASE_DB_URL",
+        "postgresql://postgres:secret@aws-0-ca-central-1.pooler.supabase.com:6543/postgres",
+    )
+
+    supabase_settings = AppSettings()
+
+    assert supabase_settings.checkpointer.postgres_uri == supabase_settings.store.postgres_uri
+    assert supabase_settings.checkpointer.postgres_uri is not None
+    assert "supabase.com:6543/postgres" in supabase_settings.checkpointer.postgres_uri
