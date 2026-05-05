@@ -64,16 +64,26 @@ async with open_postgres_persistence(database="ooai_persistence") as persistence
 
 That is the easiest async entrypoint in the package right now.
 
+If you only want the long-term store and not the full persistence bundle:
+
+```python
+from ooai_persistence import open_postgres_store
+
+async with open_postgres_store(database="ooai_persistence") as store:
+    await store.aput(("profiles", "demo"), "name", {"value": "Will"})
+    item = await store.aget(("profiles", "demo"), "name")
+```
+
 ## Common patterns
 
 ### 1. Use the store directly
 
 ```python
-from ooai_persistence import open_sync_memory_persistence
+from ooai_persistence import open_sync_memory_store
 
-with open_sync_memory_persistence() as persistence:
-    persistence.store.put(("users", "will"), "profile", {"name": "Will"})
-    profile = persistence.store.get(("users", "will"), "profile")
+with open_sync_memory_store() as store:
+    store.put(("users", "will"), "profile", {"name": "Will"})
+    profile = store.get(("users", "will"), "profile")
 ```
 
 ### 2. Compile a graph with async persistence attached
@@ -191,6 +201,17 @@ The top-level persistence helpers are:
 - `open_memory_persistence()`
 - `open_sqlite_persistence(path)`
 - `open_postgres_persistence(...)`
+
+The top-level store-only helpers are:
+
+- `open_sync_store(settings)`
+- `open_sync_memory_store()`
+- `open_sync_sqlite_store(path)`
+- `open_sync_postgres_store(...)`
+- `open_store(settings)`
+- `open_memory_store()`
+- `open_sqlite_store(path)`
+- `open_postgres_store(...)`
 
 `open_sync_graph` and `open_graph` yield a `PersistentGraph` with:
 

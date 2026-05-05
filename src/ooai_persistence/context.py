@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
+from typing import Any
 
 from ooai_persistence.bootstrap import maybe_async_setup, maybe_setup, should_setup_for_resource
 from ooai_persistence.resources import (
@@ -18,6 +19,18 @@ from ooai_persistence.settings import (
     postgres_settings,
     sqlite_settings,
 )
+
+
+def _store_only_settings(settings: AppSettings) -> AppSettings:
+    """Return a copy of settings with only the store resource enabled."""
+    return settings.model_copy(
+        update={
+            "checkpointer": settings.checkpointer.model_copy(update={"backend": "none"}),
+            "graph_cache": settings.graph_cache.model_copy(
+                update={"enabled": False, "backend": "none"}
+            ),
+        }
+    )
 
 
 @contextmanager
@@ -179,5 +192,120 @@ async def open_postgres_persistence(
         yield bundle
 
 
+@contextmanager
+def store_context(
+    settings: AppSettings,
+    *,
+    registry: MsgpackAllowlistRegistry | None = None,
+) -> Iterator[Any]:
+    """Yield only the configured synchronous store resource."""
+    with persistence_context(_store_only_settings(settings), registry=registry) as bundle:
+        if bundle.store is None:
+            raise ValueError("Store backend resolved to none.")
+        yield bundle.store
+
+
+@asynccontextmanager
+async def async_store_context(
+    settings: AppSettings,
+    *,
+    registry: MsgpackAllowlistRegistry | None = None,
+) -> AsyncIterator[Any]:
+    """Yield only the configured asynchronous store resource."""
+    async with async_persistence_context(
+        _store_only_settings(settings),
+        registry=registry,
+    ) as bundle:
+        if bundle.store is None:
+            raise ValueError("Store backend resolved to none.")
+        yield bundle.store
+
+
+@contextmanager
+def open_sync_memory_store() -> Iterator[Any]:
+    """Open a synchronous in-memory store."""
+    with store_context(memory_settings()) as store:
+        yield store
+
+
+@contextmanager
+def open_sync_sqlite_store(
+    path: str = ".ooai/persistence/persistence.sqlite3",
+) -> Iterator[Any]:
+    """Open a synchronous SQLite-backed store."""
+    with store_context(sqlite_settings(path)) as store:
+        yield store
+
+
+@contextmanager
+def open_sync_postgres_store(
+    uri: str | None = None,
+    *,
+    host: str = "localhost",
+    port: int = 5442,
+    database: str = "ooai_persistence",
+    user: str = "postgres",
+    password: str = "postgres",
+    sslmode: str = "disable",
+) -> Iterator[Any]:
+    """Open a synchronous Postgres-backed store."""
+    with store_context(
+        postgres_settings(
+            uri,
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            sslmode=sslmode,
+        )
+    ) as store:
+        yield store
+
+
+@asynccontextmanager
+async def open_memory_store() -> AsyncIterator[Any]:
+    """Open an asynchronous in-memory store."""
+    async with async_store_context(memory_settings()) as store:
+        yield store
+
+
+@asynccontextmanager
+async def open_sqlite_store(
+    path: str = ".ooai/persistence/persistence.sqlite3",
+) -> AsyncIterator[Any]:
+    """Open an asynchronous SQLite-backed store."""
+    async with async_store_context(sqlite_settings(path)) as store:
+        yield store
+
+
+@asynccontextmanager
+async def open_postgres_store(
+    uri: str | None = None,
+    *,
+    host: str = "localhost",
+    port: int = 5442,
+    database: str = "ooai_persistence",
+    user: str = "postgres",
+    password: str = "postgres",
+    sslmode: str = "disable",
+) -> AsyncIterator[Any]:
+    """Open an asynchronous Postgres-backed store."""
+    async with async_store_context(
+        postgres_settings(
+            uri,
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+            sslmode=sslmode,
+        )
+    ) as store:
+        yield store
+
+
 open_persistence = async_persistence_context
 open_sync_persistence = persistence_context
+open_store = async_store_context
+open_sync_store = store_context
