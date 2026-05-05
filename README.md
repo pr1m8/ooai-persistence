@@ -335,8 +335,8 @@ Releases are tag-driven:
 ```bash
 pdm lock --check
 make check
-git tag v0.2.3
-git push origin v0.2.3
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 The release workflow verifies that the tag matches `pyproject.toml`, runs the
