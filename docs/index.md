@@ -36,6 +36,21 @@ async with open_postgres_store(database="ooai_persistence") as store:
     await store.aput(("profiles", "demo"), "name", {"value": "Will"})
 ```
 
+## What this package adds
+
+`ooai-persistence` gives agent packages and LangGraph apps a reusable
+persistence layer with:
+
+- a long-term store
+- a LangGraph-compatible checkpointer
+- an optional graph cache
+- typed settings and env resolution
+- direct-open sync and async helpers
+
+The public API is designed so most applications can start from a store-only
+helper, a full persistence helper, or a graph helper, instead of hand-building
+nested settings.
+
 ```python
 from ooai_persistence import open_sync_persistence, sqlite_settings
 
@@ -56,6 +71,43 @@ The most useful entrypoints are:
 - `open_sync_store(...)` and `open_store(...)` when you only want the long-term store
 - `open_sync_graph(...)` and `open_graph(...)` when you want a compiled LangGraph plus managed persistence
 - `bind_graph_with_persistence(...)` when the graph is already compiled somewhere else
+
+## Agent package pattern
+
+If you are building an agent package, keep persistence setup in one small
+module and let the rest of the application depend on that boundary.
+
+Store-only usage:
+
+```python
+from ooai_persistence import open_postgres_store
+
+async with open_postgres_store() as store:
+    await store.aput(("users", "will"), "profile", {"name": "Will"})
+```
+
+Full persistence usage:
+
+```python
+from ooai_persistence import open_postgres_persistence
+
+async with open_postgres_persistence() as persistence:
+    await persistence.store.aput(("users", "will"), "profile", {"name": "Will"})
+```
+
+LangGraph usage:
+
+```python
+from ooai_persistence import open_graph, postgres_settings
+
+settings = postgres_settings()
+```
+
+Checkpointed LangGraph runs still need a runnable config like:
+
+```python
+config={"configurable": {"thread_id": "demo-thread"}}
+```
 
 ## Install
 
@@ -118,16 +170,24 @@ LANGSMITH_API_KEY=...
 LANGSMITH_PROJECT=ooai
 ```
 
+This package is not your tracing backend, but it keeps LangSmith settings close
+to persistence bootstrap so agent packages can configure both together without
+scattering that setup across modules.
+
 ## Local Infrastructure
 
 ```bash
 make bootstrap
-make infra-up
-make infra-test-postgres
-make infra-down
+make up
+make test-e2e-postgres
+make down
 ```
 
 See `infra/README.md` for Docker Compose details.
+
+The repository also includes `.readthedocs.yaml`, so the same Sphinx docs can
+be built by Read the Docs after project activation. GitHub Pages is the
+currently active docs deployment target.
 
 ## CLI Smoke Checks
 

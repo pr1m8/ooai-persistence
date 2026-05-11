@@ -74,6 +74,131 @@ async with open_postgres_store(database="ooai_persistence") as store:
     item = await store.aget(("profiles", "demo"), "name")
 ```
 
+## What this package adds
+
+This package gives an agent or LangGraph application a reusable persistence
+layer with:
+
+- a long-term store
+- a LangGraph-compatible checkpointer
+- an optional graph cache
+- typed settings and env resolution
+- direct-open sync and async helpers
+- Postgres, SQLite, and memory backends
+- E2E-tested public entrypoints
+
+The useful mental model is:
+
+- `store`: durable application or user memory
+- `checkpointer`: graph/thread execution state
+- `graph_cache`: optional caching
+- helpers: one place to bootstrap all of that cleanly
+
+## What the E2E coverage means
+
+The E2E suite exercises the package the way an application would actually use
+it:
+
+- open persistence through the public helpers
+- write and read store values
+- save and load checkpoints
+- run async Postgres smoke checks
+- verify the `make up -> make test-e2e-postgres -> make down` developer flow
+
+So the package is not only unit-tested internally; the public API paths are
+checked end to end as well.
+
+## Using it in an agent package
+
+If you are building an agent package, keep persistence setup in one small
+module and let the rest of the app depend on that.
+
+### Store-only bootstrap
+
+Use this when you only need durable memory:
+
+```python
+from ooai_persistence import open_postgres_store
+
+
+async def save_profile() -> None:
+    async with open_postgres_store() as store:
+        await store.aput(("users", "will"), "profile", {"name": "Will"})
+```
+
+### Full persistence bootstrap
+
+Use this when you need both durable storage and checkpointing:
+
+```python
+from ooai_persistence import open_postgres_persistence
+
+
+async def run_agent() -> None:
+    async with open_postgres_persistence() as persistence:
+        await persistence.store.aput(("users", "will"), "profile", {"name": "Will"})
+        checkpointer = persistence.checkpointer
+```
+
+### LangGraph bootstrap
+
+Use this when your package compiles and runs LangGraph graphs directly:
+
+```python
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+from ooai_persistence import open_graph, postgres_settings
+
+
+class State(TypedDict):
+    message: str
+    reply: str
+
+
+def respond(state: State) -> State:
+    return {"reply": f"Echo: {state['message']}"}
+
+
+graph = StateGraph(State)
+graph.add_node("respond", respond)
+graph.add_edge(START, "respond")
+graph.add_edge("respond", END)
+
+
+async def run_agent_graph() -> None:
+    async with open_graph(graph, postgres_settings()) as runtime:
+        result = await runtime.graph.ainvoke(
+            {"message": "hi", "reply": ""},
+            config={"configurable": {"thread_id": "demo-thread"}},
+        )
+```
+
+That keeps persistence concerns out of the rest of the agent package and gives
+you one place to swap memory, SQLite, local Postgres, or hosted Postgres.
+
+## LangSmith integration
+
+This package is not your tracing backend, but it keeps LangSmith-related
+settings nearby so persistence and tracing can bootstrap together.
+
+It reads the standard LangSmith environment variables:
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=...
+LANGSMITH_PROJECT=ooai
+LANGSMITH_ENDPOINT=
+```
+
+A practical split in an agent package is:
+
+- `ooai-persistence` for store, checkpointing, and graph cache
+- LangSmith env vars for tracing
+- your own runtime package for orchestration and business logic
+
+That usually keeps the boundaries clean.
+
 ## Common patterns
 
 ### 1. Use the store directly
@@ -311,6 +436,9 @@ async with open_postgres_store() as store:
     ...
 ```
 
+That makes hosted Postgres and Supabase-style setups easy to bootstrap in agent
+packages without custom config translation layers.
+
 The matching `.env` path is already laid out in [.env.example](/Users/will/Projects/ooai-persistence/.env.example).
 
 ## Default backend behavior
@@ -369,6 +497,10 @@ pdm build
 
 CI runs formatting, linting, typing, tests with coverage, and the Sphinx build.
 Docs also publish from `main` to [GitHub Pages](https://pr1m8.github.io/ooai-persistence/).
+
+The repository also includes a `.readthedocs.yaml` config so the same Sphinx
+docs can be built by Read the Docs after the project is imported there. GitHub
+Pages is the currently active published docs target in this repository.
 
 ## Releasing
 
